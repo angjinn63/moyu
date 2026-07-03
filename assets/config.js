@@ -1,6 +1,7 @@
 window.MOYU_GAME_CONFIG = {
   title: "魔域 2.4",
   swfUrl: "./assets/moyu24.swf",
+  preloadSwf: true,
   width: 580,
   height: 500,
   forceLetterbox: true,

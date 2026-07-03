@@ -6,7 +6,8 @@
     player: null,
     activeKeys: new Set(),
     controlsForced: null,
-    ruffleLoadedFrom: null
+    ruffleLoadedFrom: null,
+    swfObjectUrl: null
   };
 
   const $ = (selector) => document.querySelector(selector);
@@ -15,6 +16,38 @@
   function setLoadingText(text) {
     const el = $("#loading-text");
     if (el) el.textContent = text;
+  }
+
+  function setLoadingDetail(text) {
+    const el = $("#loading-detail");
+    if (el) el.textContent = text || "";
+  }
+
+  function setLoadingProgress(percent, detail) {
+    const value = Math.max(0, Math.min(100, Math.round(percent)));
+    const bar = $("#loading-bar-inner");
+    const pct = $("#loading-percent");
+
+    if (bar) {
+      bar.style.width = `${value}%`;
+      bar.style.transform = "none";
+      bar.classList.toggle("indeterminate", value <= 0 || value >= 96);
+    }
+
+    if (pct) pct.textContent = `${value}%`;
+    if (detail) setLoadingDetail(detail);
+  }
+
+  function formatBytes(bytes) {
+    if (!Number.isFinite(bytes) || bytes <= 0) return "";
+    const units = ["B", "KB", "MB", "GB"];
+    let size = bytes;
+    let index = 0;
+    while (size >= 1024 && index < units.length - 1) {
+      size /= 1024;
+      index += 1;
+    }
+    return `${size.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
   }
 
   function debug(message) {
@@ -41,6 +74,10 @@
   }
 
   async function loadRuffle() {
+    const fontSources = Array.isArray(config.fontSources) ? config.fontSources.filter(Boolean) : [];
+    const defaultFonts = config.defaultFonts || {};
+    const fontMapping = config.fontMapping || {};
+
     window.RufflePlayer = window.RufflePlayer || {};
     window.RufflePlayer.config = {
       autoplay: "on",
@@ -50,7 +87,10 @@
       openUrlMode: "confirm",
       showSwfDownload: false,
       splashScreen: false,
-      contextMenu: false
+      contextMenu: false,
+      fontSources: fontSources,
+      defaultFonts: defaultFonts,
+      fontMapping: fontMapping
     };
 
     const sources = (Array.isArray(config.ruffleSources) && config.ruffleSources.length)
@@ -62,9 +102,12 @@
       try {
         const isLocal = src.includes("vendor") || src.startsWith("./") || src.startsWith("/");
         setLoadingText(isLocal ? "正在加载本地 Ruffle…" : "正在加载 Ruffle CDN…");
+        setLoadingProgress(8, isLocal ? "加载本地播放器脚本" : "加载在线 Ruffle 播放器脚本");
         await loadScript(src);
+        setLoadingProgress(22, "播放器脚本加载完成，准备加载游戏文件");
         state.ruffleLoadedFrom = src;
         debug(`Ruffle loaded from ${src}`);
+        debug(`Font sources configured: ${fontSources.length}`);
         return;
       } catch (error) {
         lastError = error;
@@ -75,8 +118,67 @@
     throw lastError || new Error("Ruffle 加载失败。请确认网络可以访问 CDN，或改成本地自托管 Ruffle。");
   }
 
+  async function fetchSwfWithProgress(url) {
+    setLoadingText("正在下载游戏文件…");
+    setLoadingProgress(28, "开始下载 SWF 主文件");
+
+    const response = await fetch(url, { cache: "force-cache" });
+    if (!response.ok) {
+      throw new Error(`SWF 下载失败：HTTP ${response.status}`);
+    }
+
+    const total = Number(response.headers.get("content-length")) || 0;
+
+    if (!response.body || typeof response.body.getReader !== "function") {
+      const buffer = await response.arrayBuffer();
+      setLoadingProgress(72, `游戏文件下载完成：${formatBytes(buffer.byteLength)}`);
+      return new Blob([buffer], { type: "application/x-shockwave-flash" });
+    }
+
+    const reader = response.body.getReader();
+    const chunks = [];
+    let received = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.byteLength;
+
+      if (total > 0) {
+        const ratio = received / total;
+        const percent = 28 + ratio * 44;
+        setLoadingProgress(percent, `已下载 ${formatBytes(received)} / ${formatBytes(total)}`);
+      } else {
+        const softPercent = Math.min(68, 28 + Math.log2(received / 1024 + 1) * 6);
+        setLoadingProgress(softPercent, `已下载 ${formatBytes(received)}`);
+      }
+    }
+
+    setLoadingProgress(74, `游戏文件下载完成：${formatBytes(received)}`);
+    return new Blob(chunks, { type: "application/x-shockwave-flash" });
+  }
+
+  async function prepareSwfUrl() {
+    if (config.preloadSwf === false) {
+      return config.swfUrl;
+    }
+
+    try {
+      const swfBlob = await fetchSwfWithProgress(config.swfUrl);
+      if (state.swfObjectUrl) URL.revokeObjectURL(state.swfObjectUrl);
+      state.swfObjectUrl = URL.createObjectURL(swfBlob);
+      return state.swfObjectUrl;
+    } catch (error) {
+      debug(`prefetch SWF failed, fallback to direct url: ${error.message}`);
+      setLoadingProgress(35, "无法预读取进度，改用播放器直接加载 SWF");
+      return config.swfUrl;
+    }
+  }
+
   async function initPlayer() {
     setLoadingText("正在创建播放器…");
+    setLoadingProgress(24, "创建 Ruffle 播放容器");
 
     const shell = $("#player-shell");
     const loadingPanel = $("#loading-panel");
@@ -91,17 +193,22 @@
 
     shell.appendChild(player);
 
-    setLoadingText("正在加载 SWF 文件…");
+    const swfUrl = await prepareSwfUrl();
+
+    setLoadingText("正在解析游戏资源…");
+    setLoadingProgress(82, "Ruffle 正在解压、解析图片/音频/脚本资源");
+
     await player.load({
-      url: config.swfUrl,
+      url: swfUrl,
       autoplay: "on"
     });
 
     setLoadingText("加载完成");
+    setLoadingProgress(100, "进入游戏");
     setTimeout(() => {
       loadingPanel.classList.add("hidden");
       focusGame();
-    }, 320);
+    }, 520);
   }
 
   function focusGame() {
@@ -266,6 +373,10 @@
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) releaseAllVirtualKeys();
     });
+
+    window.addEventListener("beforeunload", () => {
+      if (state.swfObjectUrl) URL.revokeObjectURL(state.swfObjectUrl);
+    });
   }
 
   function initRotateTip() {
@@ -275,6 +386,7 @@
 
   async function main() {
     document.title = config.title;
+    setLoadingProgress(3, "初始化页面和虚拟按键");
     initRotateTip();
     bindVirtualControls();
     bindTools();
