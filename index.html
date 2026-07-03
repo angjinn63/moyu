@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#050505" />
+  <title>魔域 2.4</title>
+  <link rel="stylesheet" href="./assets/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <main id="stage" aria-label="游戏画面">
+      <div id="player-shell">
+        <div id="loading-panel">
+          <div class="logo">魔域 2.4</div>
+          <div id="loading-text">正在加载播放器…</div>
+          <div class="loading-bar"><span id="loading-bar-inner"></span></div>
+          <button id="manual-start" class="primary-btn hidden">点击开始游戏</button>
+        </div>
+      </div>
+    </main>
+
+    <section id="hud" aria-label="游戏工具栏">
+      <button id="fullscreen-btn" type="button">全屏</button>
+      <button id="rotate-btn" type="button">横屏提示</button>
+      <button id="controls-btn" type="button">按键</button>
+    </section>
+
+    <section id="mobile-controls" aria-label="手机虚拟按键">
+      <div class="dpad" aria-label="方向键">
+        <button class="vkey up" data-key="ArrowUp" type="button">▲</button>
+        <button class="vkey left" data-key="ArrowLeft" type="button">◀</button>
+        <button class="vkey right" data-key="ArrowRight" type="button">▶</button>
+        <button class="vkey down" data-key="ArrowDown" type="button">▼</button>
+      </div>
+
+      <div class="quick-pad" aria-label="数字快捷键">
+        <button class="vkey quick quick-1" data-key="Digit1" type="button">1</button>
+        <button class="vkey quick quick-2" data-key="Digit2" type="button">2</button>
+        <button class="vkey quick quick-3" data-key="Digit3" type="button">3</button>
+        <button class="vkey quick quick-4" data-key="Digit4" type="button">4</button>
+      </div>
+
+      <div class="action-pad" aria-label="动作键">
+        <button class="vkey action action-j" data-key="KeyJ" type="button">J</button>
+        <button class="vkey action action-k" data-key="KeyK" type="button">K</button>
+        <button class="vkey action action-l" data-key="KeyL" type="button">L</button>
+        <button class="vkey action action-q" data-key="KeyQ" type="button">Q</button>
+      </div>
+    </section>
+
+    <section id="rotate-tip" aria-label="横屏提示">
+      <div class="rotate-card">
+        <div class="phone-icon">▭</div>
+        <h2>建议横屏游玩</h2>
+        <p>手机旋转到横屏后，画面和虚拟按键会更适合操作。</p>
+        <button id="close-rotate-tip" type="button">继续游玩</button>
+      </div>
+    </section>
+
+    <section id="debug-panel" class="hidden" aria-label="调试信息"></section>
+  </div>
+
+  <script src="./assets/config.js"></script>
+  <script src="./assets/app.js"></script>
+</body>
+</html>
