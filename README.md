@@ -1,8 +1,29 @@
-# 魔域 2.4 GitHub Pages 版（带加载进度条）
+# 魔域 2.4 - 文本修复 + 进度条版
 
-这个版本可以直接上传到 GitHub Pages 仓库根目录使用。
+本版本保留：
 
-## 上传结构
+- 加载进度条
+- 手机虚拟按键：方向键、J/K/L/Q、1/2/3/4
+- GitHub Pages / 服务器静态部署
+- 针对中文动态文本的 Ruffle `deviceFontRenderer: "canvas"` 修复
+
+## 这版为什么能修复一部分文字问题？
+
+这个 SWF 的 NPC、怪物、任务等文本大量依赖 Flash 旧设备字体/中文字体名。Ruffle 默认设备字体渲染模式是 `embedded`，有时会只显示数字、英文或不显示中文。本版本强制改为 `canvas`，让 Ruffle 尝试调用浏览器/系统字体渲染。
+
+如果仍然无文字，说明这个 SWF 的文本更依赖 Flash 原生字体/嵌入字形行为，Ruffle 网页端无法完全兼容；需要用 JPEXS/Animate 修 SWF 字体，或使用真正 Flash Player 环境。
+
+## 调试
+
+访问地址后加：
+
+```text
+?debug=1
+```
+
+可以在左上角看到 Ruffle 加载源、字体渲染模式、默认字体配置等信息。
+
+## GitHub Pages 上传方式
 
 把本文件夹里的内容直接上传到仓库根目录，确保结构是：
 
@@ -11,35 +32,5 @@ index.html
 .nojekyll
 README.md
 assets/
-  moyu24.swf
-  config.js
-  app.js
-  styles.css
 vendor/
-  ruffle/
 ```
-
-不要把整个文件夹再套一层上传。
-
-## GitHub Pages 设置
-
-Settings → Pages → Source: Deploy from a branch → Branch: main → Folder: /root → Save
-
-访问地址一般是：
-
-```text
-https://你的GitHub用户名.github.io/仓库名/
-```
-
-## 本版更新
-
-- 加载阶段增加进度条和百分比
-- 先用 fetch 预下载 SWF，能显示 SWF 下载进度
-- 下载完成后再交给 Ruffle 解压、解析和运行
-- 保留中文字体补救配置
-- 保留手机虚拟按键：方向键、J/K/L/Q、1/2/3/4
-
-## 调试
-
-在地址后加 `?debug=1` 可显示调试信息。
-

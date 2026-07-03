@@ -76,7 +76,7 @@
   async function loadRuffle() {
     const fontSources = Array.isArray(config.fontSources) ? config.fontSources.filter(Boolean) : [];
     const defaultFonts = config.defaultFonts || {};
-    const fontMapping = config.fontMapping || {};
+    const deviceFontRenderer = config.deviceFontRenderer || "canvas";
 
     window.RufflePlayer = window.RufflePlayer || {};
     window.RufflePlayer.config = {
@@ -90,7 +90,7 @@
       contextMenu: false,
       fontSources: fontSources,
       defaultFonts: defaultFonts,
-      fontMapping: fontMapping
+      deviceFontRenderer: deviceFontRenderer
     };
 
     const sources = (Array.isArray(config.ruffleSources) && config.ruffleSources.length)
@@ -107,6 +107,8 @@
         setLoadingProgress(22, "播放器脚本加载完成，准备加载游戏文件");
         state.ruffleLoadedFrom = src;
         debug(`Ruffle loaded from ${src}`);
+        debug(`Device font renderer: ${deviceFontRenderer}`);
+        debug(`Default font groups: ${Object.keys(defaultFonts).join(", ") || "none"}`);
         debug(`Font sources configured: ${fontSources.length}`);
         return;
       } catch (error) {
@@ -200,7 +202,10 @@
 
     await player.load({
       url: swfUrl,
-      autoplay: "on"
+      autoplay: "on",
+      fontSources: Array.isArray(config.fontSources) ? config.fontSources.filter(Boolean) : [],
+      defaultFonts: config.defaultFonts || {},
+      deviceFontRenderer: config.deviceFontRenderer || "canvas"
     });
 
     setLoadingText("加载完成");
